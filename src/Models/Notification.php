@@ -51,4 +51,5 @@ class Notification extends Model
     {
         return static::where('dedupe_key', $dedupeKey)->exists();
     }
+
 }
