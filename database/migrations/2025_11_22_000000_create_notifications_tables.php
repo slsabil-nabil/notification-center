@@ -4,27 +4,26 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         // 1) جدول notifications
         Schema::create('notifications', function (Blueprint $table) {
             $table->id();
 
-            // أعمدة اختيارية تربط الإشعار بسياق خارجي (وكالة، طلب، ...إلخ)
-            // احذفها لو ما تحتاجها الآن
             $table->unsignedBigInteger('business_id')->nullable();
             $table->unsignedBigInteger('application_id')->nullable();
 
-            $table->string('category');           // نوع الإشعار (new_application, booking_created, ...)
-            $table->string('title');              // عنوان افتراضي
-            $table->text('body');                 // النص الافتراضي
-            $table->json('data')->nullable();     // بيانات إضافية (روابط، i18n, ...)
-            $table->string('dedupe_key')->nullable();     // لمنع التكرار إن احتجت
+            $table->string('category');
+            $table->json('title');            // <-- هنا التعديل
+            $table->json('body');             // <-- هنا التعديل
+            $table->json('data')->nullable(); // <-- هنا التعديل
+
+            $table->string('dedupe_key')->nullable();
             $table->boolean('requires_action')->default(false);
             $table->timestamps();
         });
+
 
         // 2) جدول notification_recipients
         Schema::create('notification_recipients', function (Blueprint $table) {
@@ -62,12 +61,16 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('notification_recipients', function (Blueprint $table) {
-            // إزالة الـ FK قبل الحذف احتياطاً
+            // حذف الـ foreign keys أولاً
+            $table->dropForeign(['notification_id']);
             $table->dropForeign(['user_id']);
+
+            // حذف الـ unique index
             $table->dropUnique('recipients_notification_user_unique');
         });
 
         Schema::dropIfExists('notification_recipients');
         Schema::dropIfExists('notifications');
     }
+
 };
