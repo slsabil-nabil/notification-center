@@ -17,27 +17,72 @@ class Notification extends Model
         'requires_action',
     ];
 
+    // فقط requires_action كمتحول منطقي
     protected $casts = [
-        'title' => 'array',
-        'body' => 'array',
-        'data' => 'array',
         'requires_action' => 'boolean',
     ];
 
+    /*
+     |--------------------------------------------------------------------------
+     | Helpers: فك JSON المخزَّن في الأعمدة
+     |--------------------------------------------------------------------------
+     */
+
+    protected function decodeColumnToArray(string $column): array
+    {
+        $raw = $this->attributes[$column] ?? null;
+
+        if (!is_string($raw) || $raw === '') {
+            return [];
+        }
+
+        $decoded = json_decode($raw, true);
+
+        return is_array($decoded) ? $decoded : [];
+    }
+
+    /*
+     |--------------------------------------------------------------------------
+     | Accessors: النص بحسب لغة الواجهة + رابط الإجراء
+     |--------------------------------------------------------------------------
+     */
+
     public function getTitleLocalizedAttribute(): string
     {
-        $loc = app()->getLocale();
-        return $this->title[$loc] ?? $this->title['en'] ?? reset($this->title) ?? '';
+        $loc = app()->getLocale(); // 'ar' أو 'en'
+
+        $arr = $this->decodeColumnToArray('title');
+
+        // اختر النص حسب اللغة ثم en ثم ar
+        return $arr[$loc]
+            ?? ($arr['en'] ?? ($arr['ar'] ?? ''));
     }
 
     public function getBodyLocalizedAttribute(): string
     {
         $loc = app()->getLocale();
-        return $this->body[$loc] ?? $this->body['en'] ?? reset($this->body) ?? '';
+
+        $arr = $this->decodeColumnToArray('body');
+
+        return $arr[$loc]
+            ?? ($arr['en'] ?? ($arr['ar'] ?? ''));
     }
 
     public function getActionUrlAttribute(): ?string
     {
-        return $this->data['action_url'] ?? null;
+        $arr = $this->decodeColumnToArray('data');
+
+        return $arr['action_url'] ?? null;
+    }
+
+    /*
+     |--------------------------------------------------------------------------
+     | العلاقات
+     |--------------------------------------------------------------------------
+     */
+
+    public function recipients()
+    {
+        return $this->hasMany(NotificationRecipient::class);
     }
 }
